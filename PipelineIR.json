@@ -1,0 +1,969 @@
+{
+  "loop": {
+    "next_file": null,
+    "next_task": null,
+    "projectTree": {},
+    "target_function": {
+      "name": "read_file",
+      "parameters": {}
+    },
+    "visited_steps": [
+      "src1/ppe-kit/application.py",
+      "src2/RestrictedAreaMonitoring/application.py"
+    ]
+  },
+  "pipeline_ir": {
+    "connections": [
+      [
+        "p01of",
+        "p02if"
+      ],
+      [
+        "p02ot",
+        "p03it"
+      ],
+      [
+        "p03ot",
+        "p04it"
+      ],
+      [
+        "p02og",
+        "p04ig"
+      ],
+      [
+        "p01of",
+        "p05if"
+      ],
+      [
+        "p05ot",
+        "p06it"
+      ],
+      [
+        "p06ot",
+        "p07it"
+      ],
+      [
+        "p05og",
+        "p07ig"
+      ],
+      [
+        "p04od",
+        "p08id"
+      ],
+      [
+        "p08ot",
+        "p09it"
+      ],
+      [
+        "p07od",
+        "p09id"
+      ],
+      [
+        "p08ot",
+        "p10it"
+      ],
+      [
+        "p01of",
+        "p10if"
+      ],
+      [
+        "p01om",
+        "p10im"
+      ],
+      [
+        "p10oz",
+        "p11iz"
+      ],
+      [
+        "p09oc",
+        "p11ic"
+      ],
+      [
+        "p11oe",
+        "p12ie"
+      ],
+      [
+        "p11oe",
+        "p13ie"
+      ]
+    ],
+    "nodes": [
+      {
+        "description": "Read every video frame and emit synchronized timing metadata.",
+        "id": 1,
+        "name": "file",
+        "ports": [
+          {
+            "direction": "output",
+            "format": {
+              "color": "BGR",
+              "encoding": "raw"
+            },
+            "framerate": {
+              "denominator": 1,
+              "numerator": 12
+            },
+            "id": "p01of",
+            "tensor": {
+              "dtype": "uint8",
+              "shape": [
+                432,
+                768,
+                3
+              ]
+            }
+          },
+          {
+            "direction": "output",
+            "format": {
+              "color": null,
+              "encoding": null
+            },
+            "framerate": {
+              "denominator": 1,
+              "numerator": 12
+            },
+            "id": "p01om",
+            "tensor": {
+              "dtype": null,
+              "shape": null
+            }
+          }
+        ],
+        "pseudo_code": "cap = cv2.VideoCapture('test_video.mp4')\nif not cap.isOpened(): raise FileNotFoundError('test_video.mp4')\nreported_fps = cap.get(cv2.CAP_PROP_FPS)\nfps = reported_fps if reported_fps > 0 else 12.0\nframe_index = 0\ntry:\n    while True:\n        ok, frame = cap.read()\n        if not ok: break\n        timestamp_ms = cap.get(cv2.CAP_PROP_POS_MSEC)\n        timestamp_s = timestamp_ms / 1000.0 if timestamp_ms > 0 else frame_index / fps\n        metadata = {'frame_index': frame_index, 'timestamp_s': timestamp_s, 'fps': fps}\n        emit(p01of=frame, p01om=metadata)\n        frame_index += 1\nfinally:\n    cap.release()",
+        "resolution": [
+          768,
+          432
+        ],
+        "type": "input",
+        "url": "file://test_video.mp4"
+      },
+      {
+        "color_order": "RGB",
+        "description": "Letterbox worker frames and prepare RGB detector tensors.",
+        "id": 2,
+        "mean": null,
+        "normalization": 0.00392156862745098,
+        "offset": null,
+        "pad_value": 114,
+        "ports": [
+          {
+            "direction": "input",
+            "format": {
+              "color": "BGR",
+              "encoding": "raw"
+            },
+            "framerate": {
+              "denominator": 1,
+              "numerator": 12
+            },
+            "id": "p02if",
+            "tensor": {
+              "dtype": "uint8",
+              "shape": [
+                432,
+                768,
+                3
+              ]
+            }
+          },
+          {
+            "direction": "output",
+            "format": {
+              "color": "RGB",
+              "encoding": "raw"
+            },
+            "framerate": {
+              "denominator": 1,
+              "numerator": 12
+            },
+            "id": "p02ot",
+            "tensor": {
+              "dtype": "fp32",
+              "shape": [
+                1,
+                3,
+                640,
+                640
+              ]
+            }
+          },
+          {
+            "direction": "output",
+            "format": {
+              "color": null,
+              "encoding": null
+            },
+            "framerate": {
+              "denominator": 1,
+              "numerator": 12
+            },
+            "id": "p02og",
+            "tensor": {
+              "dtype": null,
+              "shape": null
+            }
+          }
+        ],
+        "pseudo_code": "orig_h, orig_w = frame.shape[:2]\nr = min(640 / orig_h, 640 / orig_w)\nnew_w, new_h = round(orig_w * r), round(orig_h * r)\nresized = cv2.resize(frame, (new_w, new_h), interpolation=cv2.INTER_LINEAR)\ncanvas = np.full((640, 640, 3), 114, dtype=np.uint8)\npad_x, pad_y = (640 - new_w) // 2, (640 - new_h) // 2\ncanvas[pad_y:pad_y + new_h, pad_x:pad_x + new_w] = resized\nblob = cv2.cvtColor(canvas, cv2.COLOR_BGR2RGB).astype(np.float32) / 255.0\nblob = np.ascontiguousarray(np.transpose(blob, (2, 0, 1))[None])\nreturn blob, {'orig_h': orig_h, 'orig_w': orig_w, 'ratio': r, 'pad_x': pad_x, 'pad_y': pad_y}",
+        "resize": [
+          640,
+          640
+        ],
+        "resize_mode": "letterbox",
+        "scale": 0.00392156862745098,
+        "std": null,
+        "type": "preprocess"
+      },
+      {
+        "batchSize": 1,
+        "description": "Run COCO detector on each prepared worker frame.",
+        "id": 3,
+        "layout": "NCHW",
+        "model": {
+          "inputs": [
+            {
+              "dtype": "fp32",
+              "name": "images",
+              "shape": [
+                1,
+                3,
+                640,
+                640
+              ]
+            }
+          ],
+          "name": "YOLO11s COCO person detector",
+          "outputs": [
+            {
+              "dtype": "fp32",
+              "name": "output0",
+              "shape": [
+                1,
+                84,
+                8400
+              ]
+            }
+          ],
+          "parameter_count": 9485791,
+          "type": "engine",
+          "url": "models/yolo11s.fp16.plan",
+          "source_onnx": "models/yolo11s.onnx"
+        },
+        "ports": [
+          {
+            "direction": "input",
+            "format": {
+              "color": "RGB",
+              "encoding": "raw"
+            },
+            "framerate": {
+              "denominator": 1,
+              "numerator": 12
+            },
+            "id": "p03it",
+            "tensor": {
+              "dtype": "fp32",
+              "shape": [
+                1,
+                3,
+                640,
+                640
+              ]
+            }
+          },
+          {
+            "direction": "output",
+            "format": {
+              "color": null,
+              "encoding": null
+            },
+            "framerate": {
+              "denominator": 1,
+              "numerator": 12
+            },
+            "id": "p03ot",
+            "tensor": {
+              "dtype": "fp32",
+              "shape": [
+                1,
+                84,
+                8400
+              ]
+            }
+          }
+        ],
+        "pseudo_code": "session = get_persistent_onnxruntime_session(model.url)\nraw = session.run(['output0'], {'images': blob})[0]\nreturn raw",
+        "type": "inference"
+      },
+      {
+        "description": "Decode COCO boxes and retain NMS-filtered people.",
+        "id": 4,
+        "label_file_path": null,
+        "num_classes": 80,
+        "ports": [
+          {
+            "direction": "input",
+            "format": {
+              "color": null,
+              "encoding": null
+            },
+            "framerate": {
+              "denominator": 1,
+              "numerator": 12
+            },
+            "id": "p04it",
+            "tensor": {
+              "dtype": "fp32",
+              "shape": [
+                1,
+                84,
+                8400
+              ]
+            }
+          },
+          {
+            "direction": "input",
+            "format": {
+              "color": null,
+              "encoding": null
+            },
+            "framerate": {
+              "denominator": 1,
+              "numerator": 12
+            },
+            "id": "p04ig",
+            "tensor": {
+              "dtype": null,
+              "shape": null
+            }
+          },
+          {
+            "direction": "output",
+            "format": {
+              "color": null,
+              "encoding": null
+            },
+            "framerate": {
+              "denominator": 1,
+              "numerator": 12
+            },
+            "id": "p04od",
+            "tensor": {
+              "dtype": null,
+              "shape": null
+            }
+          }
+        ],
+        "pseudo_code": "preds = np.squeeze(raw, 0).T\nboxes_xywh, scores = preds[:, :4], preds[:, 4:]\nclass_ids = np.argmax(scores, axis=1)\nconfidences = scores[np.arange(scores.shape[0]), class_ids]\nkeep = confidences >= 0.35\nboxes_xywh, confidences, class_ids = boxes_xywh[keep], confidences[keep], class_ids[keep]\nif len(boxes_xywh) == 0: return []\ncx, cy, w, h = boxes_xywh.T\nr, px, py = geometry['ratio'], geometry['pad_x'], geometry['pad_y']\norig_w, orig_h = geometry['orig_w'], geometry['orig_h']\nx1 = np.clip((cx - w / 2 - px) / r, 0, orig_w)\ny1 = np.clip((cy - h / 2 - py) / r, 0, orig_h)\nx2 = np.clip((cx + w / 2 - px) / r, 0, orig_w)\ny2 = np.clip((cy + h / 2 - py) / r, 0, orig_h)\ndets = []\nfor c in np.unique(class_ids):\n    idxs = np.where(class_ids == c)[0]\n    rects = np.stack([x1[idxs], y1[idxs], (x2 - x1)[idxs], (y2 - y1)[idxs]], axis=1)\n    kept = cv2.dnn.NMSBoxes(rects.tolist(), confidences[idxs].tolist(), 0.35, 0.45)\n    kept = np.array(kept).flatten() if len(kept) else []\n    for i in kept:\n        oi = idxs[i]\n        if int(c) == 0: dets.append({'box': [float(x1[oi]), float(y1[oi]), float(x2[oi]), float(y2[oi])], 'score': float(confidences[oi]), 'class': 'person'})\nreturn dets",
+        "task": "detection",
+        "threshold": 0.35,
+        "top_items": null,
+        "type": "postprocess"
+      },
+      {
+        "color_order": "RGB",
+        "description": "Independently letterbox frames for the six-class PPE detector.",
+        "id": 5,
+        "mean": null,
+        "normalization": 0.00392156862745098,
+        "offset": null,
+        "pad_value": 114,
+        "ports": [
+          {
+            "direction": "input",
+            "format": {
+              "color": "BGR",
+              "encoding": "raw"
+            },
+            "framerate": {
+              "denominator": 1,
+              "numerator": 12
+            },
+            "id": "p05if",
+            "tensor": {
+              "dtype": "uint8",
+              "shape": [
+                432,
+                768,
+                3
+              ]
+            }
+          },
+          {
+            "direction": "output",
+            "format": {
+              "color": "RGB",
+              "encoding": "raw"
+            },
+            "framerate": {
+              "denominator": 1,
+              "numerator": 12
+            },
+            "id": "p05ot",
+            "tensor": {
+              "dtype": "fp32",
+              "shape": [
+                1,
+                3,
+                640,
+                640
+              ]
+            }
+          },
+          {
+            "direction": "output",
+            "format": {
+              "color": null,
+              "encoding": null
+            },
+            "framerate": {
+              "denominator": 1,
+              "numerator": 12
+            },
+            "id": "p05og",
+            "tensor": {
+              "dtype": null,
+              "shape": null
+            }
+          }
+        ],
+        "pseudo_code": "orig_h, orig_w = frame.shape[:2]\nr = min(640 / orig_h, 640 / orig_w)\nnew_w, new_h = round(orig_w * r), round(orig_h * r)\nresized = cv2.resize(frame, (new_w, new_h), interpolation=cv2.INTER_LINEAR)\ncanvas = np.full((640, 640, 3), 114, dtype=np.uint8)\npad_x, pad_y = (640 - new_w) // 2, (640 - new_h) // 2\ncanvas[pad_y:pad_y + new_h, pad_x:pad_x + new_w] = resized\nblob = cv2.cvtColor(canvas, cv2.COLOR_BGR2RGB).astype(np.float32) / 255.0\nblob = np.ascontiguousarray(np.transpose(blob, (2, 0, 1))[None])\nreturn blob, {'orig_h': orig_h, 'orig_w': orig_w, 'ratio': r, 'pad_x': pad_x, 'pad_y': pad_y}",
+        "resize": [
+          640,
+          640
+        ],
+        "resize_mode": "letterbox",
+        "scale": 0.00392156862745098,
+        "std": null,
+        "type": "preprocess"
+      },
+      {
+        "batchSize": 1,
+        "description": "Run PPE detector independently on each prepared frame.",
+        "id": 6,
+        "layout": "NCHW",
+        "model": {
+          "inputs": [
+            {
+              "dtype": "fp32",
+              "name": "images",
+              "shape": [
+                1,
+                3,
+                640,
+                640
+              ]
+            }
+          ],
+          "name": "YOLOv8n six-class PPE detector",
+          "outputs": [
+            {
+              "dtype": "fp32",
+              "name": "output0",
+              "shape": [
+                1,
+                10,
+                8400
+              ]
+            }
+          ],
+          "parameter_count": 2727560,
+          "type": "engine",
+          "url": "models/best.fp16.plan",
+          "source_onnx": "models/best.onnx"
+        },
+        "ports": [
+          {
+            "direction": "input",
+            "format": {
+              "color": "RGB",
+              "encoding": "raw"
+            },
+            "framerate": {
+              "denominator": 1,
+              "numerator": 12
+            },
+            "id": "p06it",
+            "tensor": {
+              "dtype": "fp32",
+              "shape": [
+                1,
+                3,
+                640,
+                640
+              ]
+            }
+          },
+          {
+            "direction": "output",
+            "format": {
+              "color": null,
+              "encoding": null
+            },
+            "framerate": {
+              "denominator": 1,
+              "numerator": 12
+            },
+            "id": "p06ot",
+            "tensor": {
+              "dtype": "fp32",
+              "shape": [
+                1,
+                10,
+                8400
+              ]
+            }
+          }
+        ],
+        "pseudo_code": "session = get_persistent_onnxruntime_session(model.url)\nraw = session.run(['output0'], {'images': blob})[0]\nreturn raw",
+        "type": "inference"
+      },
+      {
+        "description": "Decode PPE boxes and retain helmet and Vest detections.",
+        "id": 7,
+        "label_file_path": null,
+        "num_classes": 6,
+        "ports": [
+          {
+            "direction": "input",
+            "format": {
+              "color": null,
+              "encoding": null
+            },
+            "framerate": {
+              "denominator": 1,
+              "numerator": 12
+            },
+            "id": "p07it",
+            "tensor": {
+              "dtype": "fp32",
+              "shape": [
+                1,
+                10,
+                8400
+              ]
+            }
+          },
+          {
+            "direction": "input",
+            "format": {
+              "color": null,
+              "encoding": null
+            },
+            "framerate": {
+              "denominator": 1,
+              "numerator": 12
+            },
+            "id": "p07ig",
+            "tensor": {
+              "dtype": null,
+              "shape": null
+            }
+          },
+          {
+            "direction": "output",
+            "format": {
+              "color": null,
+              "encoding": null
+            },
+            "framerate": {
+              "denominator": 1,
+              "numerator": 12
+            },
+            "id": "p07od",
+            "tensor": {
+              "dtype": null,
+              "shape": null
+            }
+          }
+        ],
+        "pseudo_code": "CLASS_NAMES = ['Gloves', 'Vest', 'goggles', 'helmet', 'mask', 'safety_shoe']\npreds = np.squeeze(raw, 0).T\nboxes_xywh, scores = preds[:, :4], preds[:, 4:]\nclass_ids = np.argmax(scores, axis=1)\nconfidences = scores[np.arange(scores.shape[0]), class_ids]\nkeep = confidences >= 0.3\nboxes_xywh, confidences, class_ids = boxes_xywh[keep], confidences[keep], class_ids[keep]\nif len(boxes_xywh) == 0: return []\ncx, cy, w, h = boxes_xywh.T\nr, px, py = geometry['ratio'], geometry['pad_x'], geometry['pad_y']\norig_w, orig_h = geometry['orig_w'], geometry['orig_h']\nx1 = np.clip((cx - w / 2 - px) / r, 0, orig_w)\ny1 = np.clip((cy - h / 2 - py) / r, 0, orig_h)\nx2 = np.clip((cx + w / 2 - px) / r, 0, orig_w)\ny2 = np.clip((cy + h / 2 - py) / r, 0, orig_h)\nrects = np.stack([x1, y1, x2 - x1, y2 - y1], axis=1)\nidxs = cv2.dnn.NMSBoxes(rects.tolist(), confidences.tolist(), 0.3, 0.45)\nif len(idxs) == 0: return []\ndets = []\nfor i in np.array(idxs).flatten():\n    cls = int(class_ids[i])\n    if cls in (1, 3): dets.append({'box': [float(x1[i]), float(y1[i]), float(x2[i]), float(y2[i])], 'score': float(confidences[i]), 'class': cls, 'label': CLASS_NAMES[cls]})\nreturn dets",
+        "task": "detection",
+        "threshold": 0.3,
+        "top_items": null,
+        "type": "postprocess"
+      },
+      {
+        "category": "tracking",
+        "description": "Associate observed people using persistent Hungarian-matched worker identities.",
+        "external_assets": [],
+        "id": 8,
+        "inputs": [
+          "person detections"
+        ],
+        "name": "worker tracking",
+        "outputs": [
+          "currently observed worker tracks"
+        ],
+        "parameters": {
+          "iou_threshold": 0.3,
+          "max_age": 15,
+          "trail_length": 30
+        },
+        "placement": {
+          "attach_point": null,
+          "position": "post_nn"
+        },
+        "ports": [
+          {
+            "direction": "input",
+            "format": {
+              "color": null,
+              "encoding": null
+            },
+            "framerate": {
+              "denominator": 1,
+              "numerator": 12
+            },
+            "id": "p08id",
+            "tensor": {
+              "dtype": null,
+              "shape": null
+            }
+          },
+          {
+            "direction": "output",
+            "format": {
+              "color": null,
+              "encoding": null
+            },
+            "framerate": {
+              "denominator": 1,
+              "numerator": 12
+            },
+            "id": "p08ot",
+            "tensor": {
+              "dtype": null,
+              "shape": null
+            }
+          }
+        ],
+        "pseudo_code": "from scipy.optimize import linear_sum_assignment\n# Persistent per-input state: tracks=[], next_id=1. Each track has id, box, score, misses=0, hits=1, trail=[center].\ndef center(box):\n    x1, y1, x2, y2 = box\n    return (int((x1 + x2) / 2), int((y1 + y2) / 2))\ndef iou(a, b):\n    ax1, ay1, ax2, ay2 = a; bx1, by1, bx2, by2 = b\n    inter = max(0, min(ax2, bx2) - max(ax1, bx1)) * max(0, min(ay2, by2) - max(ay1, by1))\n    area_a = max(0, ax2 - ax1) * max(0, ay2 - ay1)\n    area_b = max(0, bx2 - bx1) * max(0, by2 - by1)\n    union = area_a + area_b - inter\n    return inter / union if union > 0 else 0.0\ndef new_track(det):\n    global next_id\n    t = {'id': next_id, 'box': det['box'], 'score': det['score'], 'misses': 0, 'hits': 1, 'trail': [center(det['box'])]}\n    next_id += 1\n    return t\nif not tracks:\n    for det in detections: tracks.append(new_track(det))\nelse:\n    if detections:\n        cost = np.zeros((len(tracks), len(detections)))\n        for i, trk in enumerate(tracks):\n            for j, det in enumerate(detections): cost[i, j] = 1 - iou(trk['box'], det['box'])\n        row_idx, col_idx = linear_sum_assignment(cost)\n    else:\n        row_idx, col_idx = np.array([], dtype=int), np.array([], dtype=int)\n    matched_tracks, matched_dets = set(), set()\n    for r, c in zip(row_idx, col_idx):\n        if 1 - cost[r, c] >= parameters['iou_threshold']:\n            t, det = tracks[r], detections[c]\n            t['box'], t['score'] = det['box'], det['score']\n            t['hits'] += 1; t['misses'] = 0\n            t['trail'].append(center(t['box']))\n            t['trail'] = t['trail'][-parameters['trail_length']:]\n            matched_tracks.add(r); matched_dets.add(c)\n    for i, t in enumerate(tracks):\n        if i not in matched_tracks: t['misses'] += 1\n    for j, det in enumerate(detections):\n        if j not in matched_dets: tracks.append(new_track(det))\n    tracks = [t for t in tracks if t['misses'] <= parameters['max_age']]\n# Retain missed tracks internally for association, but current-frame consumers receive observations only.\nreturn [{'id': t['id'], 'box': t['box'], 'score': t['score'], 'hits': t['hits'], 'trail': list(t['trail'])} for t in tracks if t['misses'] == 0]",
+        "reference_path": null,
+        "runs_every_frame": true,
+        "state_key": "global",
+        "triggers": [],
+        "type": "custom"
+      },
+      {
+        "category": "other",
+        "description": "Associate helmet and vest detections with observed workers.",
+        "external_assets": [],
+        "id": 9,
+        "inputs": [
+          "currently observed worker tracks",
+          "PPE detections"
+        ],
+        "name": "PPE compliance",
+        "outputs": [
+          "per-worker PPE compliance"
+        ],
+        "parameters": {
+          "compliant_when": "all required items are detected for the worker",
+          "method": "Per-worker required PPE compliance",
+          "required_items": [
+            "hard hat",
+            "vest"
+          ]
+        },
+        "placement": {
+          "attach_point": null,
+          "position": "post_tracker"
+        },
+        "ports": [
+          {
+            "direction": "input",
+            "format": {
+              "color": null,
+              "encoding": null
+            },
+            "framerate": {
+              "denominator": 1,
+              "numerator": 12
+            },
+            "id": "p09it",
+            "tensor": {
+              "dtype": null,
+              "shape": null
+            }
+          },
+          {
+            "direction": "input",
+            "format": {
+              "color": null,
+              "encoding": null
+            },
+            "framerate": {
+              "denominator": 1,
+              "numerator": 12
+            },
+            "id": "p09id",
+            "tensor": {
+              "dtype": null,
+              "shape": null
+            }
+          },
+          {
+            "direction": "output",
+            "format": {
+              "color": null,
+              "encoding": null
+            },
+            "framerate": {
+              "denominator": 1,
+              "numerator": 12
+            },
+            "id": "p09oc",
+            "tensor": {
+              "dtype": null,
+              "shape": null
+            }
+          }
+        ],
+        "pseudo_code": "# Detector labels are 'helmet' (hard hat) and 'Vest' (vest); neither model detects PPE usage directly.\ndef overlap(a, b):\n    return max(0.0, min(a[2], b[2]) - max(a[0], b[0])) * max(0.0, min(a[3], b[3]) - max(a[1], b[1]))\nassigned = {t['id']: {'hard hat': None, 'vest': None} for t in tracks}\nfor item, label in [('hard hat', 'helmet'), ('vest', 'Vest')]:\n    candidates = []\n    for j, det in enumerate(ppe_detections):\n        if det['label'] != label: continue\n        x1, y1, x2, y2 = det['box']\n        cx, cy = (x1 + x2) / 2, (y1 + y2) / 2\n        for t in tracks:\n            bx1, by1, bx2, by2 = t['box']\n            height = by2 - by1\n            if height <= 0 or bx2 <= bx1: continue\n            if item == 'hard hat': region = [bx1, by1, bx2, by1 + 0.35 * height]\n            else: region = [bx1, by1 + 0.20 * height, bx2, by1 + 0.80 * height]\n            if region[0] <= cx <= region[2] and region[1] <= cy <= region[3]:\n                quality = overlap(det['box'], region) / max(1e-9, (x2 - x1) * (y2 - y1))\n                candidates.append((quality, det['score'], j, t['id']))\n    used_detections = set()\n    for quality, score, j, tid in sorted(candidates, reverse=True):\n        if j not in used_detections and assigned[tid][item] is None:\n            assigned[tid][item] = {'box': ppe_detections[j]['box'], 'score': score, 'label': label}\n            used_detections.add(j)\nresult = []\nfor t in tracks:\n    items = assigned[t['id']]\n    missing = [item for item in parameters['required_items'] if items[item] is None]\n    result.append({'track_id': t['id'], 'box': t['box'], 'required_items': list(parameters['required_items']), 'detected_items': {k: v for k, v in items.items() if v is not None}, 'missing_items': missing, 'compliant': len(missing) == 0})\nreturn result",
+        "reference_path": null,
+        "runs_every_frame": true,
+        "state_key": "none",
+        "triggers": [],
+        "type": "custom"
+      },
+      {
+        "category": "gating",
+        "description": "Measure worker foot-point zone entry and cumulative occupancy.",
+        "external_assets": [],
+        "id": 10,
+        "inputs": [
+          "currently observed worker tracks",
+          "original image",
+          "source timing metadata"
+        ],
+        "name": "hazard-zone entry",
+        "outputs": [
+          "zone statuses and entry events"
+        ],
+        "parameters": {
+          "alert_frames": 2,
+          "fps_fallback": 25.0,
+          "method": "Alert on hazard-zone entry",
+          "zones": []
+        },
+        "placement": {
+          "attach_point": null,
+          "position": "post_tracker"
+        },
+        "ports": [
+          {
+            "direction": "input",
+            "format": {
+              "color": null,
+              "encoding": null
+            },
+            "framerate": {
+              "denominator": 1,
+              "numerator": 12
+            },
+            "id": "p10it",
+            "tensor": {
+              "dtype": null,
+              "shape": null
+            }
+          },
+          {
+            "direction": "input",
+            "format": {
+              "color": "BGR",
+              "encoding": "raw"
+            },
+            "framerate": {
+              "denominator": 1,
+              "numerator": 12
+            },
+            "id": "p10if",
+            "tensor": {
+              "dtype": "uint8",
+              "shape": [
+                432,
+                768,
+                3
+              ]
+            }
+          },
+          {
+            "direction": "input",
+            "format": {
+              "color": null,
+              "encoding": null
+            },
+            "framerate": {
+              "denominator": 1,
+              "numerator": 12
+            },
+            "id": "p10im",
+            "tensor": {
+              "dtype": null,
+              "shape": null
+            }
+          },
+          {
+            "direction": "output",
+            "format": {
+              "color": null,
+              "encoding": null
+            },
+            "framerate": {
+              "denominator": 1,
+              "numerator": 12
+            },
+            "id": "p10oz",
+            "tensor": {
+              "dtype": null,
+              "shape": null
+            }
+          }
+        ],
+        "pseudo_code": "# Persistent records keyed by track ID survive tracker pruning. Each starts with streak=0, frames_in_zone=0, zone_name=None, last_zone_name=None, peak_streak=0.\nh, w = frame.shape[:2]\nzones = parameters['zones'] or [{'name': 'Restricted Area', 'polygon': [[0, 0], [w, 0], [w, h], [0, h]]}]\nfps = source_metadata['fps'] if source_metadata['fps'] > 0 else parameters['fps_fallback']\nstatuses, entries = [], []\nfor t in tracks:\n    x1, y1, x2, y2 = t['box']\n    foot = ((x1 + x2) / 2, y2)\n    zone_name = None\n    for zone in zones:\n        if cv2.pointPolygonTest(np.array(zone['polygon'], dtype=np.float32), foot, False) >= 0:\n            zone_name = zone['name']\n            break\n    rec = records.setdefault(t['id'], {'streak': 0, 'frames_in_zone': 0, 'zone_name': None, 'last_zone_name': None, 'peak_streak': 0})\n    if zone_name:\n        rec['frames_in_zone'] += 1\n        rec['streak'] += 1\n        rec['zone_name'] = zone_name\n        rec['last_zone_name'] = zone_name\n    else:\n        rec['streak'] = 0\n        rec['zone_name'] = None\n    rec['peak_streak'] = max(rec['peak_streak'], rec['streak'])\n    active = rec['streak'] >= parameters['alert_frames']\n    status = {'track_id': t['id'], 'box': t['box'], 'score': t['score'], 'zone': rec['zone_name'], 'status': 'INTRUSION!' if active else ('IN ZONE' if rec['zone_name'] else 'CLEAR'), 'streak': rec['streak'], 'dwell_seconds': rec['frames_in_zone'] / fps}\n    statuses.append(status)\n    if rec['streak'] == parameters['alert_frames']:\n        entries.append({**status, 'event': 'hazard_zone_entry', 'frame_index': source_metadata['frame_index'], 'timestamp_s': source_metadata['timestamp_s']})\n# A missed track has no current observation: retain its record without creating a current-frame event.\nreturn {'statuses': statuses, 'entries': entries, 'active_intruder_count': sum(s['status'] == 'INTRUSION!' for s in statuses), 'distinct_intruder_count': sum(r['peak_streak'] >= parameters['alert_frames'] for r in records.values())}",
+        "reference_path": null,
+        "runs_every_frame": true,
+        "state_key": "track_id",
+        "triggers": [],
+        "type": "custom"
+      },
+      {
+        "category": "gating",
+        "description": "Attach worker PPE assessments to new safety breaches.",
+        "external_assets": [],
+        "id": 11,
+        "inputs": [
+          "zone entry events",
+          "per-worker PPE compliance"
+        ],
+        "name": "safety breach alert",
+        "outputs": [
+          "safety breach incident records"
+        ],
+        "parameters": {
+          "method": "Alert on hazard-zone entry"
+        },
+        "placement": {
+          "attach_point": null,
+          "position": "post_tracker"
+        },
+        "ports": [
+          {
+            "direction": "input",
+            "format": {
+              "color": null,
+              "encoding": null
+            },
+            "framerate": {
+              "denominator": 1,
+              "numerator": 12
+            },
+            "id": "p11iz",
+            "tensor": {
+              "dtype": null,
+              "shape": null
+            }
+          },
+          {
+            "direction": "input",
+            "format": {
+              "color": null,
+              "encoding": null
+            },
+            "framerate": {
+              "denominator": 1,
+              "numerator": 12
+            },
+            "id": "p11ic",
+            "tensor": {
+              "dtype": null,
+              "shape": null
+            }
+          },
+          {
+            "direction": "output",
+            "format": {
+              "color": null,
+              "encoding": null
+            },
+            "framerate": {
+              "denominator": 1,
+              "numerator": 12
+            },
+            "id": "p11oe",
+            "tensor": {
+              "dtype": null,
+              "shape": null
+            }
+          }
+        ],
+        "pseudo_code": "by_id = {assessment['track_id']: assessment for assessment in compliance}\nincidents = []\nfor entry in zone_results['entries']:\n    tid = entry['track_id']\n    assessment = by_id.get(tid)\n    incidents.append({'event': 'safety_breach', 'reason': 'hazard_zone_entry', 'track_id': tid, 'zone': entry['zone'], 'box': entry['box'], 'score': entry['score'], 'frame_index': entry['frame_index'], 'timestamp_s': entry['timestamp_s'], 'dwell_seconds': entry['dwell_seconds'], 'ppe': assessment})\nreturn incidents",
+        "reference_path": null,
+        "runs_every_frame": true,
+        "state_key": "none",
+        "triggers": [],
+        "type": "custom"
+      },
+      {
+        "description": "Publish new safety breach records to requested broker.",
+        "grid": null,
+        "id": 12,
+        "name": "mqtt",
+        "output_type": "single",
+        "ports": [
+          {
+            "direction": "input",
+            "format": {
+              "color": null,
+              "encoding": null
+            },
+            "framerate": {
+              "denominator": 1,
+              "numerator": 12
+            },
+            "id": "p12ie",
+            "tensor": {
+              "dtype": null,
+              "shape": null
+            }
+          }
+        ],
+        "pseudo_code": "for incident in incidents:\n    mqtt_client.publish(topic_from_url('mqtt://factory/alerts'), json.dumps(incident), qos=0)\n# An empty incident list produces no alert message.",
+        "resolution": null,
+        "type": "output",
+        "url": "mqtt://factory/alerts"
+      },
+      {
+        "description": "Append new incidents to the requested JSON log.",
+        "grid": null,
+        "id": 13,
+        "name": "json",
+        "output_type": "single",
+        "ports": [
+          {
+            "direction": "input",
+            "format": {
+              "color": null,
+              "encoding": null
+            },
+            "framerate": {
+              "denominator": 1,
+              "numerator": 12
+            },
+            "id": "p13ie",
+            "tensor": {
+              "dtype": null,
+              "shape": null
+            }
+          }
+        ],
+        "pseudo_code": "# Maintain a valid JSON array at the requested path; initialize it to [] if absent.\nfor incident in incidents:\n    append_to_json_array_atomically('output/metadata.json', incident)\n# Frames without a new incident do not create incident records.",
+        "resolution": null,
+        "type": "output",
+        "url": "file://output/metadata.json"
+      }
+    ]
+  }
+}

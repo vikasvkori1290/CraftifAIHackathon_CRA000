@@ -1,0 +1,7 @@
+[property]
+enable=1
+pts-tolerance=60000000
+
+[group-0]
+src-ids-model-1=0
+src-ids-model-2=0

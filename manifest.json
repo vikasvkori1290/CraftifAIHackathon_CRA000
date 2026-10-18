@@ -1,0 +1,56 @@
+{
+  "schema": 1,
+  "project_name": "PPE and Hazard Zone Monitoring",
+  "project_id": "363c4db3-6f36-49d2-8338-dcc5f3bac716",
+  "pipegen_version": "0.5.1",
+  "exported_at": "2026-10-17T08:25:19Z",
+  "origin": {
+    "gpu": "NVIDIA GeForce RTX 2050",
+    "trt": "10.3.0",
+    "arch": "x86_64",
+    "image": "craftifaidocker/deepstream:7.1-amd64-v3",
+    "gpu_slug": "nvidia-geforce-rtx-2050"
+  },
+  "models": [
+    {
+      "name": "best",
+      "onnx": "models/best.onnx",
+      "plan": "models/best.fp16.plan",
+      "precision": "fp16",
+      "workspace_mb": 1024,
+      "builder_optimization_level": 3,
+      "origin_builder_optimization_level": 0,
+      "onnx_sha256": "ec997d7c22d913be68414fbe0414b002f3b89100a2ad983536ff2fae1a04aa5e",
+      "plan_sha256": "f3c055746b77ac058ca74f51218b39c424384773a2dfe5f50f8f16a01c46eb92",
+      "engine_bytes": 11315892,
+      "layer_count": 202
+    },
+    {
+      "name": "yolo11s",
+      "onnx": "models/yolo11s.onnx",
+      "plan": "models/yolo11s.fp16.plan",
+      "precision": "fp16",
+      "workspace_mb": 1024,
+      "builder_optimization_level": 3,
+      "origin_builder_optimization_level": 0,
+      "onnx_sha256": "f8d06a921024c1a46091d48a59a8e377ba189f14250df167fe82f408ca37814b",
+      "plan_sha256": "f6094631794c49d536c7a43eeccfb678681b970d7dcf452eed9e22edb1d37989",
+      "engine_bytes": 28161564,
+      "layer_count": 264
+    }
+  ],
+  "io": {
+    "default_input_kind": "file",
+    "default_input": "test_video.mp4",
+    "supported_inputs": [
+      "file",
+      "rtsp"
+    ],
+    "input_required": true,
+    "output_dir": "out",
+    "has_display_sink": false
+  },
+  "warnings": [
+    "the pipeline read test_video.mp4, which lives outside the project and cannot be shipped \u2014 the recipient must pass --input"
+  ]
+}

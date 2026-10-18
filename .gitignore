@@ -1,0 +1,20 @@
+# Runtime outputs
+out/
+
+# Parser build outputs
+pipeline/build/*.so
+pipeline/build/*.o
+
+# Cached engine dotfiles generated on target machines
+models/.*.plan.*
+
+# First-run stamp files
+.first-run-*
+.first-run.*
+
+# System / IDE files
+.DS_Store
+Thumbs.db
+*.log
+.vscode/
+.idea/
